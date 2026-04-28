@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">BudgetTrackerFinal</string>
-
+    <string name="login_hint_username">Username</string>
+    <string name="login_hint_password">Password</string>
+    <string name="login_button">Login</string>
+    <string name="login_error_invalid">Invalid username or password</string>
 </resources>
