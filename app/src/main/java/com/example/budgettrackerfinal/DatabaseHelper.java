@@ -28,7 +28,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COL_EXP_END_TIME = "end_time";
     private static final String COL_EXP_PHOTO = "photo_path";
 
-    // Goals table (single row)
+    // Goals table
     private static final String TABLE_GOALS = "goals";
     private static final String COL_GOAL_ID = "id";
     private static final String COL_GOAL_MIN = "min_goal";
