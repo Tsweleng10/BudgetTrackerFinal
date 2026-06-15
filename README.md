@@ -118,4 +118,4 @@ This project is submitted for academic purposes as part of a software developmen
 
 ## Author
 
-St10451745 Joshua Tsweleng – [GitHub Profile]([https://github.com/yourusername](https://github.com/Tsweleng10))
+St10451745 Joshua Tsweleng – [GitHub Profile]([https://github.com/Tsweleng10])
