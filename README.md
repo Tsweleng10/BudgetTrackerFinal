@@ -50,16 +50,6 @@ The workflow uses the official `actions/checkout` and `actions/setup-java` toget
 1. **Dark Mode** – Toggle between light and dark themes. The setting persists across app restarts.
 2. **Export to CSV** – Exports all expense records to a CSV file saved in the app’s external files directory. Useful for backup or further analysis in Excel.
 
-## Screenshots
-
-*Add screenshots of your app here. You can insert images by uploading them to the repository and referencing them:*
-
-![Login Screen](screenshots/login.png)
-![Dashboard](screenshots/dashboard.png)
-![Add Expense](screenshots/addexpense.png)
-![Graph](screenshots/graph.png)
-![Gamification](screenshots/gamification.png)
-
 ## Video Demonstration
 
 [Watch the full demonstration on YouTube]([https://youtu.be/your-video-id](https://youtu.be/ehe5fCKN5ug))  
@@ -128,4 +118,4 @@ This project is submitted for academic purposes as part of a software developmen
 
 ## Author
 
-St10451745 Joshua Tsweleng – [GitHub Profile](https://github.com/yourusername)
+St10451745 Joshua Tsweleng – [GitHub Profile]([https://github.com/yourusername](https://github.com/Tsweleng10))
