@@ -47,6 +47,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
+        <Button
+            android:id="@+id/btnShowGraph"
+            android:text="Show Graph (Spending per Category)"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnDarkMode"
+            android:text="Toggle Dark Mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <Button
+            android:id="@+id/btnExportCSV"
+            android:text="Export to CSV"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
         <TextView
             android:id="@+id/tvGoals"
             android:layout_width="wrap_content"
@@ -54,6 +72,21 @@
             android:text="Goals: Not set"
             android:layout_marginTop="16dp"/>
 
+        <TextView
+            android:id="@+id/tvGamification"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Points: 0 | Streak: 0"
+            android:layout_marginTop="8dp"/>
+
+        <LinearLayout
+            android:id="@+id/goalVisualLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"/>
+
+        <!-- Output text area (will also show graph) -->
         <TextView
             android:id="@+id/tvOutput"
             android:layout_width="match_parent"

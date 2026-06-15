@@ -5,31 +5,36 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class DashboardActivity extends AppCompatActivity {
 
     private DatabaseHelper dbHelper;
-    private TextView tvOutput, tvGoals;
+    private TextView tvOutput, tvGoals, tvGamification;
+    private LinearLayout goalVisualLayout;
     private static final int REQUEST_CAMERA_PERMISSION = 100;
     private static final int REQUEST_IMAGE_CAPTURE = 101;
     private String currentPhotoPath;
@@ -48,28 +53,30 @@ public class DashboardActivity extends AppCompatActivity {
         dbHelper = new DatabaseHelper(this);
         tvOutput = findViewById(R.id.tvOutput);
         tvGoals = findViewById(R.id.tvGoals);
+        tvGamification = findViewById(R.id.tvGamification);
+        goalVisualLayout = findViewById(R.id.goalVisualLayout);
 
         Button btnAddCategory = findViewById(R.id.btnAddCategory);
         Button btnAddExpense = findViewById(R.id.btnAddExpense);
         Button btnSetGoals = findViewById(R.id.btnSetGoals);
         Button btnViewExpenses = findViewById(R.id.btnViewExpenses);
         Button btnViewTotals = findViewById(R.id.btnViewTotals);
+        Button btnShowGraph = findViewById(R.id.btnShowGraph);
+        Button btnDarkMode = findViewById(R.id.btnDarkMode);
+        Button btnExportCSV = findViewById(R.id.btnExportCSV);
 
         btnAddCategory.setOnClickListener(v -> showAddCategoryDialog());
         btnAddExpense.setOnClickListener(v -> showAddExpenseDialog());
         btnSetGoals.setOnClickListener(v -> showSetGoalsDialog());
         btnViewExpenses.setOnClickListener(v -> showDateRangeDialog(true));
         btnViewTotals.setOnClickListener(v -> showDateRangeDialog(false));
+        btnShowGraph.setOnClickListener(v -> showGraphDialog());
+        btnDarkMode.setOnClickListener(v -> toggleDarkMode());
+        btnExportCSV.setOnClickListener(v -> exportToCSV());
 
         refreshGoalsDisplay();
-    }
-
-    private void refreshGoalsDisplay() {
-        double[] goals = dbHelper.getGoals();
-        if (goals[0] == 0 && goals[1] == 0)
-            tvGoals.setText("Goals: Not set");
-        else
-            tvGoals.setText(String.format(Locale.US, "Monthly goals - Min: %.2f, Max: %.2f", goals[0], goals[1]));
+        refreshGamificationDisplay();
+        updateGoalVisual();
     }
 
     // --- Add Category ---
@@ -91,18 +98,17 @@ public class DashboardActivity extends AppCompatActivity {
         builder.show();
     }
 
-    // --- Add Expense (with optional photo) ---
+    // --- Add Expense ---
     private void showAddExpenseDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Add Expense");
 
-        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
-        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(32, 32, 32, 32);
 
-        // Category spinner
         final android.widget.Spinner categorySpinner = new android.widget.Spinner(this);
-        java.util.List<String> categories = dbHelper.getAllCategories();
+        List<String> categories = dbHelper.getAllCategories();
         android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categories);
         categorySpinner.setAdapter(adapter);
 
@@ -118,9 +124,9 @@ public class DashboardActivity extends AppCompatActivity {
         final EditText endTimeInput = new EditText(this);
         endTimeInput.setHint("End time (HH:MM)");
 
-        android.widget.TextView label = new android.widget.TextView(this);
-        label.setText("Category:");
-        layout.addView(label);
+        androidx.appcompat.widget.AppCompatTextView categoryLabel = new androidx.appcompat.widget.AppCompatTextView(this);
+        categoryLabel.setText("Category:");
+        layout.addView(categoryLabel);
         layout.addView(categorySpinner);
         layout.addView(amountInput);
         layout.addView(descInput);
@@ -223,7 +229,7 @@ public class DashboardActivity extends AppCompatActivity {
         }
     }
 
-    // --- Set Monthly Goals ---
+    // --- Set Goals ---
     private void showSetGoalsDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Set Monthly Spending Goals");
@@ -231,8 +237,8 @@ public class DashboardActivity extends AppCompatActivity {
         minInput.setHint("Minimum amount (e.g., 1000)");
         final EditText maxInput = new EditText(this);
         maxInput.setHint("Maximum amount (e.g., 5000)");
-        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
-        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(minInput);
         layout.addView(maxInput);
         builder.setView(layout);
@@ -241,13 +247,14 @@ public class DashboardActivity extends AppCompatActivity {
             double max = Double.parseDouble(maxInput.getText().toString().isEmpty() ? "0" : maxInput.getText().toString());
             dbHelper.saveGoal(min, max);
             refreshGoalsDisplay();
+            updateGoalVisual();
             Toast.makeText(this, "Goals saved", Toast.LENGTH_SHORT).show();
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
     }
 
-    // --- View Expenses by Period or View Totals per Category ---
+    // --- View Expenses / Totals by Period ---
     private void showDateRangeDialog(final boolean isExpenseList) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Select Period");
@@ -255,8 +262,8 @@ public class DashboardActivity extends AppCompatActivity {
         startDate.setHint("Start date (YYYY-MM-DD)");
         final EditText endDate = new EditText(this);
         endDate.setHint("End date (YYYY-MM-DD)");
-        android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
-        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(startDate);
         layout.addView(endDate);
         builder.setView(layout);
@@ -319,5 +326,138 @@ public class DashboardActivity extends AppCompatActivity {
         }
         tvOutput.setText(sb.toString());
         cursor.close();
+    }
+
+    // --- Graph (text-based) ---
+    private void showGraphDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select period for graph");
+        final EditText startDate = new EditText(this);
+        startDate.setHint("Start (YYYY-MM-DD)");
+        final EditText endDate = new EditText(this);
+        endDate.setHint("End (YYYY-MM-DD)");
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.addView(startDate);
+        layout.addView(endDate);
+        builder.setView(layout);
+        builder.setPositiveButton("Show Graph", (dialog, which) -> {
+            String start = startDate.getText().toString();
+            String end = endDate.getText().toString();
+            if (start.isEmpty() || end.isEmpty()) {
+                Toast.makeText(this, "Enter both dates", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            displayGraph(start, end);
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void displayGraph(String startDate, String endDate) {
+        Cursor cursor = dbHelper.getTotalsByCategory(startDate, endDate);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Spending per category from ").append(startDate).append(" to ").append(endDate).append(":\n\n");
+        double max = 0;
+        if (cursor.moveToFirst()) {
+            do {
+                double total = cursor.getDouble(1);
+                if (total > max) max = total;
+            } while (cursor.moveToNext());
+            cursor.moveToFirst();
+        }
+        if (max == 0) {
+            sb.append("No expenses found.");
+        } else {
+            while (cursor.moveToNext()) {
+                String cat = cursor.getString(0);
+                double total = cursor.getDouble(1);
+                int barLength = (int) ((total / max) * 20); // max 20 asterisks
+                sb.append(cat).append(": ");
+                for (int i = 0; i < barLength; i++) sb.append("*");
+                sb.append(" R").append(total).append("\n");
+            }
+        }
+        tvOutput.setText(sb.toString());
+        cursor.close();
+    }
+
+    // --- Gamification & Goals UI updates ---
+    private void refreshGoalsDisplay() {
+        double[] goals = dbHelper.getGoals();
+        if (goals[0] == 0 && goals[1] == 0)
+            tvGoals.setText("Goals: Not set");
+        else
+            tvGoals.setText(String.format(Locale.US, "Monthly goals - Min: %.2f, Max: %.2f", goals[0], goals[1]));
+    }
+
+    private void refreshGamificationDisplay() {
+        Cursor c = dbHelper.getGamificationData();
+        if (c.moveToFirst()) {
+            int points = c.getInt(0);
+            int streak = c.getInt(1);
+            String badges = c.getString(2);
+            tvGamification.setText("Points: " + points + " | Streak: " + streak + " logs\nBadges: " + (badges.isEmpty() ? "none" : badges));
+        }
+        c.close();
+    }
+
+    private void updateGoalVisual() {
+        double[] goals = dbHelper.getGoals();
+        double currentTotal = dbHelper.getCurrentMonthTotalSpent();
+        goalVisualLayout.removeAllViews();
+        if (goals[0] == 0 && goals[1] == 0) {
+            TextView tv = new TextView(this);
+            tv.setText("Set monthly goals to see progress.");
+            goalVisualLayout.addView(tv);
+            return;
+        }
+        TextView progressText = new TextView(this);
+        progressText.setText("Current month spending: R" + currentTotal + " / Goal range: R" + goals[0] + " - R" + goals[1]);
+        progressText.setPadding(16,16,16,16);
+        progressText.setBackgroundColor(0xFFE0E0E0);
+        goalVisualLayout.addView(progressText);
+    }
+
+    // --- Dark Mode ---
+    private void toggleDarkMode() {
+        int currentNightMode = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        }
+        recreate();
+    }
+
+    // --- Export to CSV ---
+    private void exportToCSV() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 200);
+            return;
+        }
+        try {
+            File exportDir = new File(getExternalFilesDir(null), "exports");
+            if (!exportDir.exists()) exportDir.mkdirs();
+            File file = new File(exportDir, "budget_data_" + System.currentTimeMillis() + ".csv");
+            FileWriter writer = new FileWriter(file);
+            writer.append("Category,Amount,Description,Date,Start Time,End Time\n");
+            Cursor c = dbHelper.getExpensesBetween("1900-01-01", "3000-12-31");
+            while (c.moveToNext()) {
+                String cat = c.getString(c.getColumnIndexOrThrow("name"));
+                double amt = c.getDouble(c.getColumnIndexOrThrow("amount"));
+                String desc = c.getString(c.getColumnIndexOrThrow("description"));
+                String date = c.getString(c.getColumnIndexOrThrow("date"));
+                String st = c.getString(c.getColumnIndexOrThrow("start_time"));
+                String et = c.getString(c.getColumnIndexOrThrow("end_time"));
+                writer.append(cat).append(",").append(String.valueOf(amt)).append(",").append(desc).append(",").append(date).append(",").append(st).append(",").append(et).append("\n");
+            }
+            c.close();
+            writer.flush();
+            writer.close();
+            Toast.makeText(this, "Exported to " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+        } catch (IOException e) {
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 }
