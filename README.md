@@ -52,8 +52,8 @@ The workflow uses the official `actions/checkout` and `actions/setup-java` toget
 
 ## Video Demonstration
 
-[Watch the full demonstration on YouTube]([https://youtu.be/your-video-id](https://youtu.be/ehe5fCKN5ug))  
-*(Replace with your unlisted YouTube link)*
+[Watch the full demonstration on YouTube]((https://youtu.be/ehe5fCKN5ug))  
+*(https://youtu.be/ehe5fCKN5ug)*
 
 ## Installation
 
